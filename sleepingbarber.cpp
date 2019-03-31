@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <pthread.h> 
+#include <queue>
 // make 10 a variable in the end
 using namespace std;
 void randwait(int secs) {
@@ -8,30 +9,39 @@ void randwait(int secs) {
   len = (int) ((drand48() * secs) + 1);
   while(len--);
 }
+void wait(int* S){
+  while(*S==0); 
+  *S -= 1;
+}
 
-int wait(int);
-int signal(int);
+void wait(int* S1, int* S2){
+  while(*S1==0 || *S2==0); 
+  *S1 -= 1;
+  *S2 -=1;
+}
+
+void signal(int* S){
+  *S+=1;
+}
+
 
 void *customer(void *num);
 void *barber(void *);
-bool sleep = 0;
-int waitar = 10;
-bool chair = 0;
-bool cut = 0;
-int count = 0;
+int awake[] = {0};
+int waitar= 10;
+int chair[] = {0};
+int count[] = {0};
+int customers[]={0,1,2,3,4,5,6,7,8,9};
+queue<int> w;
 
 int main(){
-  int Number[10];
-  for (int i=0; i<10; i++) {
-    Number[i] = i;
-  }
   pthread_t tid[10];
   pthread_t btid;
   pthread_join(btid,NULL);
   printf("\nBarber Entered shop");
   pthread_create(&btid, NULL, barber, NULL);
   for (int i=0; i<10; i++) {
-    pthread_create(&tid[i], NULL, customer, (void *)&Number[i]);
+    pthread_create(&tid[i], NULL, customer, (void *)&customers[i]);
   }
 
   for (int i=0; i<10; i++) {
@@ -39,74 +49,40 @@ int main(){
   }
 }
 
-void wakebarber(int i){
-    sleep = wait(sleep);
-    chair = wait(chair);
-    printf("\nBarber was woken up by customer %d", i);
-  }
-void cuthair(int i){
-  cut = signal(cut);
-  chair = signal(chair); 
-  printf("\nBarber is cutting hair of customer %d", i);
-  randwait(100000);
-  printf("\nBarber finished cutting hair of customer %d", i);
-  cut = wait(cut);
-  chair = wait(chair);
-  count--;
-  }
-void* barber(void *){
-    while(1){
-    if((waitar==10)&&(sleep==0)&&(cut==0)&&(count==0)){
-    sleep = signal(sleep);
-    chair = signal(chair);
-    printf("\nBarber has gone to sleep");   
-  }
-}
-}
- 
-
-
 void *customer(void *number){
     int num = *(int *)number;
    
     printf("\nCustomer %d leaving for barber shop.\n", num);
     randwait(20);
     printf("\nCustomer %d arrived at barber shop.\n", num);
-    count++;
-   
-    if(waitar==0){
-    printf("\nCustomer cant enter sorry."); 
-    count--;
-  }
-    if(sleep==1){
-      wakebarber(num);
-      cuthair(num);
-    }
-
-  if(cut==1){
-    waitar = wait(waitar);
+    if(waitar>0){
+    waitar -=1;
     printf("\nCustomer %d entered waiting room", num);
-    while(cut==1);
-    if(chair==0&&cut==0)
-    cuthair(num);
-    waitar = signal(waitar);
-     
-  }
-
-  }
-
-  
-
-
-int wait(int S){ 
-  while(S<=0);
-  S--;
-  return S;
+    w.push(num);
+    signal(count);
+    signal(chair);
+    while(awake[0]==0||w.front()!=num);
+    wait(awake);
+    printf("\nBarber is cutting hair of customer %d", num);
+    randwait(100); //haircut
+    printf("\nBarber finished cutting hair of customer %d", num);
+    }else{
+    printf("\nCustomer %d cant enter sorry.",num); 
+    }
+   while(1);
 }
+void* barber(void *){
+    wait(count);{  //sleeping
+    while(1){
+    wait(count,chair);
+    waitar+=1;
+    signal(awake);
+    signal(chair);
+    randwait(2314);
+    w.pop();
 
-int signal(int S){
-  S++;
-  return S;
+  }
 }
+} 
 
 
