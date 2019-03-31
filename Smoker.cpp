@@ -3,12 +3,12 @@
 #include <pthread.h> 
 using namespace std;
 
-string sem[] = {"Paper and Tobacco", "Matches and Paper", "Matches and Tobacco"};
+
 int semaphores[] = {0,0,0}; // 0 indicates not on table
 int done[] = {1}; 
 int agi[] = {3};
 int smokers[] = {0, 1, 2}; 
-string resource[] = {"Matches","Tobacco","Paper"};
+
 
 void exec(int secs) {
   int len;
@@ -30,6 +30,9 @@ void wait(int* semaphore, string printer){
 void signal(int* semaphore){
   *semaphore += 1;
 }
+//semaphore names
+string sem[] = {"Paper and Tobacco", "Matches and Paper", "Matches and Tobacco"};
+string resource[] = {"Matches","Tobacco","Paper"};
 
 void* agent(void* num) 
 {
